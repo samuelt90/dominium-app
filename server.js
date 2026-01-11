@@ -3,23 +3,37 @@ const fs = require("fs");
 const path = require("path");
 const { google } = require("googleapis");
 
-const PORT = 5173;
+// Railway asigna PORT automáticamente
+const PORT = process.env.PORT || 5173;
 
-// Ajusta si tu JSON tiene otro nombre
-const KEYFILE = path.join(__dirname, "secrets", "google-service-account.json");
+// Sheet ID (puedes dejarlo fijo o moverlo a env)
+const SPREADSHEET_ID =
+  process.env.SPREADSHEET_ID || "1AVL0xdYRou9fnoVO_AdE0jwPOsEBWoBP3u8J33y1egE";
 
-// Tu Google Sheet ID (ya confirmado)
-const SPREADSHEET_ID = "1AVL0xdYRou9fnoVO_AdE0jwPOsEBWoBP3u8J33y1egE";
-
-// Columnas del demo:
-// Productos: A:D = codigo | nombre | precio_sugerido_venta | detalle
-// Cajas:    A:E = codigo | nombre | precio_sugerido_venta | detalle | cantidad
+// IMPORTANTE: ahora viene desde variable de entorno (NO archivo)
+const SERVICE_ACCOUNT_JSON = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 
 async function getSheetsClient() {
+  if (!SERVICE_ACCOUNT_JSON) {
+    throw new Error(
+      "Falta GOOGLE_SERVICE_ACCOUNT_JSON en variables de entorno (Railway)."
+    );
+  }
+
+  let credentials;
+  try {
+    credentials = JSON.parse(SERVICE_ACCOUNT_JSON);
+  } catch (e) {
+    throw new Error(
+      "GOOGLE_SERVICE_ACCOUNT_JSON no es JSON válido. Pégalo completo con llaves { }."
+    );
+  }
+
   const auth = new google.auth.GoogleAuth({
-    keyFile: KEYFILE,
+    credentials,
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
+
   return google.sheets({ version: "v4", auth });
 }
 
@@ -35,7 +49,7 @@ async function findProductByCode(sheets, codigo) {
   // Asume encabezado en fila 1
   for (let i = 1; i < values.length; i++) {
     const row = values[i] || [];
-    const code = (row[0] || "").trim();
+    const code = String(row[0] || "").trim();
     if (code === codigo) {
       return {
         codigo: code,
@@ -85,49 +99,46 @@ function serveFile(res, filePath, contentType) {
   }
 }
 
-
-
 const server = http.createServer(async (req, res) => {
-    // API: agregar a Productos (registrar producto)
-if (req.method === "POST" && req.url === "/api/add-product") {
-  let raw = "";
-  req.on("data", (chunk) => (raw += chunk));
-  req.on("end", async () => {
-    try {
-      const body = raw ? JSON.parse(raw) : {};
+  // API: registrar producto
+  if (req.method === "POST" && req.url === "/api/add-product") {
+    let raw = "";
+    req.on("data", (chunk) => (raw += chunk));
+    req.on("end", async () => {
+      try {
+        const body = raw ? JSON.parse(raw) : {};
+        const codigo = String(body.codigo || "").trim();
+        const nombre = String(body.nombre || "").trim();
+        const precio = String(body.precio_sugerido_venta || "").trim();
+        const detalle = String(body.detalle || "").trim();
 
-      const codigo = String(body.codigo || "").trim();
-      const nombre = String(body.nombre || "").trim();
-      const precio = String(body.precio_sugerido_venta || "").trim();
-      const detalle = String(body.detalle || "").trim();
+        if (!codigo) return sendJson(res, 400, { ok: false, error: "codigo requerido" });
+        if (!nombre) return sendJson(res, 400, { ok: false, error: "nombre requerido" });
+        if (!precio) return sendJson(res, 400, { ok: false, error: "precio_sugerido_venta requerido" });
 
-      if (!codigo) return sendJson(res, 400, { ok: false, error: "codigo requerido" });
-      if (!nombre) return sendJson(res, 400, { ok: false, error: "nombre requerido" });
-      if (!precio) return sendJson(res, 400, { ok: false, error: "precio_sugerido_venta requerido" });
+        const sheets = await getSheetsClient();
 
-      const sheets = await getSheetsClient();
+        // Evitar duplicados por código
+        const existing = await findProductByCode(sheets, codigo);
+        if (existing) {
+          return sendJson(res, 200, { ok: true, already_exists: true, product: existing });
+        }
 
-      // (Opcional simple) evitar duplicados por codigo: buscar primero
-      const existing = await findProductByCode(sheets, codigo);
-if (existing) return sendJson(res, 200, { ok: true, already_exists: true, product: existing });
-      const newRow = [codigo, nombre, precio, detalle];
+        const newRow = [codigo, nombre, precio, detalle];
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: SPREADSHEET_ID,
+          range: "Productos!A:D",
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: [newRow] },
+        });
 
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: SPREADSHEET_ID,
-        range: "Productos!A:D",
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values: [newRow] },
-      });
-
-      return sendJson(res, 200, { ok: true });
-    } catch (e) {
-      return sendJson(res, 500, { ok: false, error: e?.message || "error" });
-    }
-  });
-  return;
-}
-
-
+        return sendJson(res, 200, { ok: true });
+      } catch (e) {
+        return sendJson(res, 500, { ok: false, error: e?.message || "error" });
+      }
+    });
+    return;
+  }
 
   // API: agregar a caja
   if (req.method === "POST" && req.url === "/api/add-to-caja") {
