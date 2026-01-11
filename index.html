@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dominium – v0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+  <h2>Dominium – v0</h2>
+
+  <div style="margin-bottom: 12px;">
+    <label>
+      <input type="radio" name="mode" value="producto" checked />
+      Registrar producto
+    </label>
+    &nbsp;&nbsp;
+    <label>
+      <input type="radio" name="mode" value="caja" />
+      Llenar caja
+    </label>
+  </div>
+
+  <div id="reader" style="width:300px; height:300px;"></div>
+
+  <p><strong>Estado:</strong></p>
+  <p id="status">—</p>
+
+  <div id="productForm" style="display:none; margin-top: 12px;">
+    <h3>Nuevo producto</h3>
+    <p><strong>Código:</strong> <span id="formCodigo"></span></p>
+
+    <div style="margin-bottom: 8px;">
+      <label>Nombre<br/>
+        <input id="nombre" type="text" style="width:300px;" />
+      </label>
+    </div>
+
+    <div style="margin-bottom: 8px;">
+      <label>Precio sugerido venta<br/>
+        <input id="precio" type="text" style="width:300px;" />
+      </label>
+    </div>
+
+    <div style="margin-bottom: 8px;">
+      <label>Detalle (opcional)<br/>
+        <input id="detalle" type="text" style="width:300px;" />
+      </label>
+    </div>
+
+    <button id="btnGuardar">Guardar producto</button>
+  </div>
+
+  <!-- IMPORTANTE: esto debe ser URL normal, no markdown -->
+  <script defer src="https://unpkg.com/html5-qrcode"></script>
+
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      const statusEl = document.getElementById("status");
+      const formEl = document.getElementById("productForm");
+      const formCodigoEl = document.getElementById("formCodigo");
+      const nombreEl = document.getElementById("nombre");
+      const precioEl = document.getElementById("precio");
+      const detalleEl = document.getElementById("detalle");
+      const btnGuardar = document.getElementById("btnGuardar");
+
+      let scanner = null;
+      let running = false;
+      let lastCode = null;
+      let lastAt = 0;
+      let scannedCodigo = null;
+
+      function getMode() {
+        return document.querySelector('input[name="mode"]:checked').value;
+      }
+
+      function showForm(codigo) {
+        scannedCodigo = codigo;
+        formCodigoEl.textContent = codigo;
+        nombreEl.value = "";
+        precioEl.value = "";
+        detalleEl.value = "";
+        formEl.style.display = "block";
+      }
+
+      function hideForm() {
+        scannedCodigo = null;
+        formEl.style.display = "none";
+      }
+
+      async function startScanner() {
+        if (running) return;
+        running = true;
+
+        hideForm();
+        statusEl.textContent = "Iniciando cámara...";
+
+        scanner = new Html5Qrcode("reader");
+
+        try {
+          await scanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: 250 },
+            // CALLBACK CORREGIDO: normaliza codigo + try/finally para cerrar SIEMPRE
+            async (decodedText) => {
+              const now = Date.now();
+              if (decodedText === lastCode && (now - lastAt) < 1500) return;
+              lastCode = decodedText;
+              lastAt = now;
+
+              // Normaliza: deja solo dígitos (evita espacios, guiones, etc.)
+              const codigo = String(decodedText).replace(/\D/g, "").trim();
+
+              if (!codigo) {
+                statusEl.textContent = "No se leyó un código válido.";
+                await stopScanner();
+                return;
+              }
+
+              try {
+                const mode = getMode();
+
+                if (mode === "caja") {
+                  statusEl.textContent = `Código: ${codigo} (agregando a caja...)`;
+
+                  const resp = await fetch("/api/add-to-caja", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ codigo })
+                  });
+
+                  const data = await resp.json();
+
+                  if (!resp.ok || !data.ok) {
+                    statusEl.textContent = `Error: ${data.error || "No se pudo agregar a Cajas"}`;
+                  } else {
+                    statusEl.textContent = `Agregado a caja: ${data.product.nombre}`;
+                  }
+
+                  return;
+                }
+
+                // mode === "producto"
+                statusEl.textContent = `Código: ${codigo}. Completa datos y guarda.`;
+                showForm(codigo);
+
+              } catch (e) {
+                console.error(e);
+                statusEl.textContent = "Error inesperado (red o servidor).";
+              } finally {
+                // CLAVE: siempre cerrar cámara, haya éxito o error
+                await stopScanner();
+              }
+            }
+          );
+        } catch (e) {
+          running = false;
+          console.error(e);
+          statusEl.textContent = "No se pudo iniciar la cámara";
+        }
+      }
+
+      async function stopScanner() {
+        if (!scanner) { running = false; return; }
+        try {
+          await scanner.stop();
+          await scanner.clear();
+        } catch (e) {
+          console.error(e);
+        } finally {
+          running = false;
+          scanner = null;
+        }
+      }
+
+      btnGuardar.addEventListener("click", async () => {
+        if (!scannedCodigo) return;
+
+        const nombre = nombreEl.value.trim();
+        const precio_sugerido_venta = precioEl.value.trim();
+        const detalle = detalleEl.value.trim();
+
+        if (!nombre) {
+          statusEl.textContent = "Falta nombre";
+          return;
+        }
+        if (!precio_sugerido_venta) {
+          statusEl.textContent = "Falta precio sugerido de venta";
+          return;
+        }
+
+        statusEl.textContent = "Guardando producto...";
+
+        try {
+          const resp = await fetch("/api/add-product", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              codigo: scannedCodigo,
+              nombre,
+              precio_sugerido_venta,
+              detalle
+            })
+          });
+
+          const data = await resp.json();
+
+          // Si el backend devuelve already_exists, mostramos el mensaje que quieres
+          if (resp.ok && data.ok && data.already_exists) {
+            statusEl.textContent = "Producto ya registrado";
+            hideForm();
+            return;
+          }
+
+          if (!resp.ok || !data.ok) {
+            statusEl.textContent = `Error: ${data.error || "No se pudo guardar"}`;
+            return;
+          }
+
+          statusEl.textContent = "Producto registrado correctamente";
+          hideForm();
+
+        } catch (e) {
+          console.error(e);
+          statusEl.textContent = "Error de red guardando producto";
+        }
+      });
+
+      document.querySelectorAll('input[name="mode"]').forEach((el) => {
+        el.addEventListener("change", () => {
+          hideForm();
+          statusEl.textContent = `Modo: ${getMode()}. Listo para escanear.`;
+        });
+      });
+
+      // Inicia escáner al cargar
+      startScanner();
+
+      // Seguridad: liberar cámara al salir
+      window.addEventListener("beforeunload", () => {
+        stopScanner();
+      });
+    });
+  </script>
+</body>
+</html>
