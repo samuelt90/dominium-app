@@ -1,0 +1,19 @@
+{
+  "name": "Dominium",
+  "short_name": "Dominium",
+  "description": "Control operativo de inventario, stock, escaneo y movimientos.",
+  "start_url": "/login",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F5F7FA",
+  "theme_color": "#0B1220",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

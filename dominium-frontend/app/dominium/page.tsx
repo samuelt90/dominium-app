@@ -1,5 +1,5 @@
-import { DominiumShell } from "@/components/dominium/DominiumShell";
+import { redirect } from "next/navigation";
 
 export default function DominiumPage() {
-  return <DominiumShell />;
+  redirect("/login");
 }
