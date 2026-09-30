@@ -1,22 +1,18 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Manrope } from "next/font/google";
+import { DominiumThemeProvider } from "@/components/dominium/theme/DominiumThemeProvider";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const manrope = Manrope({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-dominium",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Dominium",
   description: "Control operativo de inventario, stock, escaneo y movimientos.",
   manifest: "/manifest.json",
-  themeColor: "#0B1220",
   icons: {
     icon: "/app-icon.svg",
     apple: "/app-icon.svg",
@@ -29,11 +25,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="es" suppressHydrationWarning>
+      <body className={`${manrope.variable} font-dominium antialiased`}>
+        <DominiumThemeProvider>{children}</DominiumThemeProvider>
+      </body>
     </html>
   );
 }
