@@ -41,6 +41,8 @@ type ScanState =
     };
 
 export function ScanProductFlow() {
+  const [scannerKey, setScannerKey] = useState(1);
+
   const [scanState, setScanState] = useState<ScanState>({
     status: "waiting",
     barcode: null,
@@ -73,6 +75,8 @@ export function ScanProductFlow() {
       barcode: null,
       product: null,
     });
+
+    setScannerKey((currentKey) => currentKey + 1);
   }
 
   return (
@@ -88,117 +92,114 @@ export function ScanProductFlow() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-[var(--d-radius-xl)] bg-[var(--d-surface)] p-4 shadow-[var(--d-shadow-soft)]">
-        <DominiumBarcodeScanner onScan={handleScan} />
+        <ScanResultPanel scanState={scanState} />
 
         <div className="mt-4">
-          {scanState.status === "waiting" && (
-            <div className="rounded-[var(--d-radius-lg)] border border-[var(--d-border)] bg-[var(--d-bg)] p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--d-soft)]">
-                Estado
-              </p>
-
-              <h3 className="mt-2 text-2xl font-black tracking-[-0.05em] text-[var(--d-text)]">
-                Cámara activa
-              </h3>
-
-              <p className="mt-2 text-sm font-semibold leading-6 text-[var(--d-muted)]">
-                Apunta al código de barras del producto.
-              </p>
-            </div>
-          )}
-
-          {scanState.status === "found" && (
-            <ProductFoundResult product={scanState.product} onReset={resetScan} />
-          )}
-
-          {scanState.status === "not-found" && (
-            <CodeNotFoundResult barcode={scanState.barcode} onReset={resetScan} />
-          )}
+          <DominiumBarcodeScanner key={scannerKey} onScan={handleScan} />
         </div>
+
+        <ScanActions scanState={scanState} onReset={resetScan} />
       </div>
     </section>
   );
 }
 
-function ProductFoundResult({
-  product,
-  onReset,
-}: {
-  product: DominiumMockProduct;
-  onReset: () => void;
-}) {
+function ScanResultPanel({ scanState }: { scanState: ScanState }) {
+  if (scanState.status === "waiting") {
+    return (
+      <div className="rounded-[var(--d-radius-lg)] border border-[var(--d-border)] bg-[var(--d-bg)] p-4">
+        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--d-soft)]">
+          Estado
+        </p>
+
+        <h3 className="mt-2 text-2xl font-black tracking-[-0.06em] text-[var(--d-text)]">
+          Esperando código
+        </h3>
+
+        <p className="mt-1 text-sm font-semibold leading-5 text-[var(--d-muted)]">
+          La cámara está lista para leer el código de barras.
+        </p>
+      </div>
+    );
+  }
+
+  if (scanState.status === "not-found") {
+    return (
+      <div className="rounded-[var(--d-radius-lg)] border border-[var(--d-border)] bg-[var(--d-bg)] p-4">
+        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--d-soft)]">
+          Código no asociado
+        </p>
+
+        <h3 className="mt-2 font-mono text-2xl font-black tracking-[-0.05em] text-[var(--d-text)]">
+          {scanState.barcode}
+        </h3>
+
+        <p className="mt-1 text-sm font-semibold leading-5 text-[var(--d-muted)]">
+          El código fue leído, pero no existe en productos registrados.
+        </p>
+      </div>
+    );
+  }
+
+  return <ProductCompactResult product={scanState.product} />;
+}
+
+function ProductCompactResult({ product }: { product: DominiumMockProduct }) {
   return (
     <div className="rounded-[var(--d-radius-lg)] border border-[var(--d-border)] bg-[var(--d-bg)] p-4">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--d-soft)]">
             Producto detectado
           </p>
 
-          <h3 className="mt-2 text-2xl font-black tracking-[-0.05em] text-[var(--d-text)]">
+          <h3 className="mt-2 text-2xl font-black leading-tight tracking-[-0.06em] text-[var(--d-text)]">
             {product.name}
           </h3>
 
-          <p className="mt-1 text-sm font-semibold text-[var(--d-muted)]">
+          <p className="mt-1 text-sm font-black text-[var(--d-muted)]">
             {product.sku}
           </p>
         </div>
 
-        <span className="rounded-full bg-[var(--d-surface-strong)] px-3 py-2 text-xs font-black text-[var(--d-primary)]">
+        <span className="shrink-0 rounded-full bg-[var(--d-surface-strong)] px-3 py-2 text-xs font-black text-[var(--d-primary)]">
           {getProductStatusLabel(product.status)}
         </span>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <InfoTile label="Precio" value={`Q${product.price}`} />
-        <InfoTile label="Categoría" value={product.category} />
-        <InfoTile label="Aquí" value={`${product.locationStock} unidades`} />
-        <InfoTile label="Total" value={`${product.totalStock} unidades`} />
+      <div className="mt-4 grid grid-cols-4 gap-2">
+        <CompactMetric label="Precio" value={`Q${product.price}`} />
+        <CompactMetric label="Aquí" value={`${product.locationStock}`} />
+        <CompactMetric label="Total" value={`${product.totalStock}`} />
+        <CompactMetric label="Código" value={product.barcode} mono />
       </div>
-
-      <div className="mt-4 rounded-[var(--d-radius-md)] border border-[var(--d-border)] bg-[var(--d-surface)] p-3">
-        <p className="text-xs font-bold text-[var(--d-muted)]">Código leído</p>
-        <p className="mt-1 font-mono text-sm font-black text-[var(--d-text)]">
-          {product.barcode}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        onClick={onReset}
-        className="mt-4 h-12 w-full rounded-[var(--d-radius-md)] bg-[var(--d-primary)] text-sm font-black text-[var(--d-bg)]"
-      >
-        Escanear otro
-      </button>
     </div>
   );
 }
 
-function CodeNotFoundResult({
-  barcode,
+function ScanActions({
+  scanState,
   onReset,
 }: {
-  barcode: string;
+  scanState: ScanState;
   onReset: () => void;
 }) {
-  return (
-    <div className="rounded-[var(--d-radius-lg)] border border-[var(--d-border)] bg-[var(--d-bg)] p-4">
-      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--d-soft)]">
-        Código no asociado
-      </p>
+  if (scanState.status === "waiting") {
+    return (
+      <div className="mt-4 rounded-[var(--d-radius-md)] border border-[var(--d-border)] bg-[var(--d-bg)] px-4 py-3">
+        <p className="text-sm font-bold text-[var(--d-muted)]">
+          Apunta al código de barras. El resultado aparecerá arriba de la cámara.
+        </p>
+      </div>
+    );
+  }
 
-      <h3 className="mt-2 font-mono text-2xl font-black tracking-[-0.05em] text-[var(--d-text)]">
-        {barcode}
-      </h3>
-
-      <p className="mt-2 text-sm font-semibold leading-6 text-[var(--d-muted)]">
-        El código fue leído, pero no existe en los productos registrados.
-      </p>
-
-      <div className="mt-5 grid gap-3">
+  if (scanState.status === "not-found") {
+    return (
+      <div className="mt-4 grid gap-3">
         <button
           type="button"
-          className="h-12 rounded-[var(--d-radius-md)] border border-[var(--d-border)] bg-[var(--d-surface)] text-sm font-black text-[var(--d-text)]"
+          className="h-12 rounded-[var(--d-radius-md)] border border-[var(--d-border)] bg-[var(--d-bg)] text-sm font-black text-[var(--d-text)]"
         >
           Buscar producto existente
         </button>
@@ -218,15 +219,43 @@ function CodeNotFoundResult({
           Escanear otro
         </button>
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onReset}
+      className="mt-4 h-12 w-full rounded-[var(--d-radius-md)] bg-[var(--d-primary)] text-sm font-black text-[var(--d-bg)]"
+    >
+      Escanear otro
+    </button>
   );
 }
 
-function InfoTile({ label, value }: { label: string; value: string }) {
+function CompactMetric({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   return (
-    <div className="rounded-[var(--d-radius-md)] border border-[var(--d-border)] bg-[var(--d-surface)] p-3">
-      <p className="text-xs font-bold text-[var(--d-muted)]">{label}</p>
-      <p className="mt-1 text-sm font-black text-[var(--d-text)]">{value}</p>
+    <div className="min-w-0 rounded-[var(--d-radius-md)] border border-[var(--d-border)] bg-[var(--d-surface)] px-3 py-2">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--d-soft)]">
+        {label}
+      </p>
+
+      <p
+        className={[
+          "mt-1 truncate text-sm font-black text-[var(--d-text)]",
+          mono ? "font-mono" : "",
+        ].join(" ")}
+      >
+        {value}
+      </p>
     </div>
   );
 }

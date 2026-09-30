@@ -4,12 +4,20 @@ import { useEffect, useRef, useState } from "react";
 
 type DominiumBarcodeScannerProps = {
   onScan: (barcode: string) => void;
+  cooldownMs?: number;
 };
 
-export function DominiumBarcodeScanner({ onScan }: DominiumBarcodeScannerProps) {
+export function DominiumBarcodeScanner({
+  onScan,
+  cooldownMs = 1400,
+}: DominiumBarcodeScannerProps) {
   const scannerRef = useRef<HTMLDivElement | null>(null);
   const instanceRef = useRef<any>(null);
-  const lastCodeRef = useRef<string | null>(null);
+  const lastScanRef = useRef<{
+    barcode: string;
+    timestamp: number;
+  } | null>(null);
+
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -21,7 +29,8 @@ export function DominiumBarcodeScanner({ onScan }: DominiumBarcodeScannerProps) 
 
         if (!scannerRef.current || !mounted) return;
 
-        const scannerId = "dominium-product-scanner";
+        const scannerId = `dominium-product-scanner-${crypto.randomUUID()}`;
+        scannerRef.current.id = scannerId;
 
         const scanner = new Html5Qrcode(scannerId);
         instanceRef.current = scanner;
@@ -35,16 +44,31 @@ export function DominiumBarcodeScanner({ onScan }: DominiumBarcodeScannerProps) 
           },
           (decodedText: string) => {
             const barcode = decodedText.trim();
+            const now = Date.now();
 
-            if (!barcode || barcode === lastCodeRef.current) {
+            if (!barcode) {
               return;
             }
 
-            lastCodeRef.current = barcode;
+            const lastScan = lastScanRef.current;
+
+            if (
+              lastScan &&
+              lastScan.barcode === barcode &&
+              now - lastScan.timestamp < cooldownMs
+            ) {
+              return;
+            }
+
+            lastScanRef.current = {
+              barcode,
+              timestamp: now,
+            };
+
             onScan(barcode);
           },
           () => {
-            // No mostramos errores por cada frame no leído.
+            // No mostramos errores por cada frame sin lectura.
           }
         );
       } catch {
@@ -66,15 +90,11 @@ export function DominiumBarcodeScanner({ onScan }: DominiumBarcodeScannerProps) 
           .catch(() => undefined);
       }
     };
-  }, [onScan]);
+  }, [cooldownMs, onScan]);
 
   return (
     <div className="overflow-hidden rounded-[var(--d-radius-xl)] border border-white/10 bg-black shadow-[var(--d-shadow-strong)]">
-      <div
-        id="dominium-product-scanner"
-        ref={scannerRef}
-        className="min-h-[260px] w-full overflow-hidden"
-      />
+      <div ref={scannerRef} className="min-h-[260px] w-full overflow-hidden" />
 
       {error && (
         <div className="border-t border-white/10 bg-[var(--d-terminal-bg)] px-4 py-3 text-sm font-bold text-[var(--d-terminal-accent)]">

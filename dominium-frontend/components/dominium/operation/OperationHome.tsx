@@ -5,7 +5,7 @@ import type { DominiumOperationModeId } from "@/types/dominium";
 import { operationModes } from "@/lib/dominium/mock-operation";
 import { DominiumThemeToggle } from "@/components/dominium/theme/DominiumThemeToggle";
 import { ScanProductFlow } from "@/components/dominium/operation/flows/ScanProductFlow";
-
+import { GuideBuilderFlow } from "./flows/GuideBuilderFlow";
 export function OperationHome() {
   const [activeModeId, setActiveModeId] =
     useState<DominiumOperationModeId>("scan-product");
@@ -188,14 +188,8 @@ function OperationFlow({ modeId }: { modeId: DominiumOperationModeId }) {
   }
 
   if (modeId === "guide-builder") {
-    return (
-      <PendingOperation
-        eyebrow="Guía"
-        title="Armar guía"
-        description="Este flujo usará el mismo scanner para agregar productos a una guía activa."
-      />
-    );
-  }
+  return <GuideBuilderFlow />;
+}
 
   return (
     <PendingOperation
