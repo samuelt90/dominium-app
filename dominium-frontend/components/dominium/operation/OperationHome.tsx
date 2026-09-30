@@ -6,6 +6,7 @@ import { operationModes } from "@/lib/dominium/mock-operation";
 import { DominiumThemeToggle } from "@/components/dominium/theme/DominiumThemeToggle";
 import { ScanProductFlow } from "@/components/dominium/operation/flows/ScanProductFlow";
 import { GuideBuilderFlow } from "./flows/GuideBuilderFlow";
+import { AuthorizedReceiptFlow } from "./flows/AuthorizedReceiptFlow";
 export function OperationHome() {
   const [activeModeId, setActiveModeId] =
     useState<DominiumOperationModeId>("scan-product");
@@ -188,16 +189,10 @@ function OperationFlow({ modeId }: { modeId: DominiumOperationModeId }) {
   }
 
   if (modeId === "guide-builder") {
-  return <GuideBuilderFlow />;
-}
+    return <GuideBuilderFlow />;
+  }
 
-  return (
-    <PendingOperation
-      eyebrow="Recepción"
-      title="Recepción autorizada"
-      description="Este flujo validará cada código contra una recepción previamente autorizada."
-    />
-  );
+  return <AuthorizedReceiptFlow />;
 }
 
 function PendingOperation({

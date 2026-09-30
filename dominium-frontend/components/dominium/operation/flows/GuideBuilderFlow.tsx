@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useRef } from "react";
 import {
   findMockProductByBarcode,
   type DominiumMockProduct,
@@ -75,6 +75,8 @@ type LastScan =
 
 export function GuideBuilderFlow() {
   const [guideCode] = useState(() => createGuideCode());
+  const scanLockedRef = useRef(false);
+  const pauseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [customerType, setCustomerType] =
     useState<DominiumCustomerType>("minorista");
   const [customerName, setCustomerName] = useState("Mostrador");
@@ -87,6 +89,12 @@ export function GuideBuilderFlow() {
     message: "Escanea productos para agregarlos al pedido.",
   });
 
+
+  const [pauseOverlay, setPauseOverlay] = useState<{
+  productName: string;
+  message: string;
+} | null>(null);
+
   const totalUnits = useMemo(() => {
     return items.reduce((sum, item) => sum + item.quantity, 0);
   }, [items]);
@@ -98,20 +106,53 @@ export function GuideBuilderFlow() {
     );
   }, [items]);
 
+  function startOperationalPause({
+  productName,
+  message,
+}: {
+  productName: string;
+  message: string;
+}) {
+  scanLockedRef.current = true;
+
+  setPauseOverlay({
+    productName,
+    message,
+  });
+
+  if (pauseTimeoutRef.current) {
+    clearTimeout(pauseTimeoutRef.current);
+  }
+
+  pauseTimeoutRef.current = setTimeout(() => {
+    setPauseOverlay(null);
+    scanLockedRef.current = false;
+  }, 2600);
+}
+
   const handleScan = useCallback(
-    async (barcode: string) => {
-      const product = findMockProductByBarcode(barcode);
+  async (barcode: string) => {
+    if (scanLockedRef.current) {
+      return;
+    }
+
+    scanLockedRef.current = true;
+
+    const product = findMockProductByBarcode(barcode);
 
       if (!product) {
-        setLastScan({
-          status: "not-found",
-          barcode,
-          product: null,
-          message: "El código fue leído, pero no existe en productos registrados.",
-        });
+  setLastScan({
+    status: "not-found",
+    barcode,
+    product: null,
+    message: "El código fue leído, pero no existe en productos registrados.",
+  });
 
-        return;
-      }
+  scanLockedRef.current = false;
+
+  return;
+}
+
 
       setItems((currentItems) => {
         const existingItem = currentItems.find(
@@ -149,6 +190,8 @@ export function GuideBuilderFlow() {
         message: "Producto agregado. Enviando al archivo conectado.",
       });
 
+
+
       const payload = createGuideSheetPayload({
         guideCode,
         customerType,
@@ -178,23 +221,43 @@ export function GuideBuilderFlow() {
         product,
         message: result.message,
       });
+      startOperationalPause({
+  productName: product.name,
+  message:
+    result.status === "sent"
+      ? "Enviado al archivo"
+      : result.message,
+});
     },
     [customerName, customerType, guideCode]
   );
 
-  function clearGuide() {
-    setItems([]);
+function clearGuide() {
+  setItems([]);
+  setPauseOverlay(null);
+  scanLockedRef.current = false;
 
-    setLastScan({
-      status: "waiting",
-      barcode: null,
-      product: null,
-      message: "Escanea productos para agregarlos al pedido.",
-    });
+  if (pauseTimeoutRef.current) {
+    clearTimeout(pauseTimeoutRef.current);
+    pauseTimeoutRef.current = null;
   }
 
+  setLastScan({
+    status: "waiting",
+    barcode: null,
+    product: null,
+    message: "Escanea productos para agregarlos al pedido.",
+  });
+}
+
   return (
-    <section className="flex h-full min-h-0 flex-col gap-4">
+  <section className="relative flex h-full min-h-0 flex-col gap-4">
+    {pauseOverlay && (
+      <OperationalPauseOverlay
+        productName={pauseOverlay.productName}
+        message={pauseOverlay.message}
+      />
+    )}
       <div className="shrink-0">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--d-soft)]">
           Armar guía
@@ -465,6 +528,35 @@ function GuideMetric({
       >
         {value}
       </p>
+    </div>
+  );
+}
+function OperationalPauseOverlay({
+  productName,
+  message,
+}: {
+  productName: string;
+  message: string;
+}) {
+  return (
+    <div className="absolute inset-0 z-30 flex items-center justify-center rounded-[var(--d-radius-xl)] bg-black/55 px-5 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-[var(--d-radius-xl)] border border-white/15 bg-[var(--d-surface)] p-5 text-center shadow-[var(--d-shadow-strong)]">
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--d-soft)]">
+          Producto registrado
+        </p>
+
+        <h3 className="mt-3 text-3xl font-black leading-tight tracking-[-0.07em] text-[var(--d-text)]">
+          {productName}
+        </h3>
+
+        <p className="mt-3 text-base font-black text-[var(--d-primary)]">
+          {message}
+        </p>
+
+        <p className="mt-4 text-sm font-semibold leading-6 text-[var(--d-muted)]">
+          Retira el producto y acerca el siguiente.
+        </p>
+      </div>
     </div>
   );
 }
