@@ -55,24 +55,24 @@ export function OperationHome() {
               </div>
             </header>
 
-            <div className="mt-8 shrink-0 px-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--d-soft)]">
-                Acciones disponibles
-              </p>
+            <div className="mt-7 shrink-0 px-1">
+  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--d-soft)]">
+    Acciones disponibles
+  </p>
 
-              <h2 className="mt-2 text-2xl font-black tracking-[-0.06em] text-[var(--d-text)]">
-                Selecciona una operación
-              </h2>
-            </div>
+  <h2 className="mt-2 text-[1.7rem] font-black leading-tight tracking-[-0.06em] text-[var(--d-text)]">
+    Selecciona una operación
+  </h2>
+</div>
 
-            <div className="flex min-h-0 flex-1 items-center">
-              <div className="grid w-full gap-4">
+<div className="mt-5 min-h-0 flex-1 overflow-y-auto pb-4">
+  <div className="grid w-full gap-3">
                 {operationModes.map((mode) => (
                   <button
                     key={mode.id}
                     type="button"
                     onClick={() => openMobileFlow(mode.id)}
-                    className="grid min-h-[132px] grid-cols-[1fr_auto] items-center gap-4 rounded-[var(--d-radius-xl)] border border-[var(--d-border)] bg-[var(--d-surface)] p-5 text-left shadow-[var(--d-shadow-soft)] active:scale-[0.99]"
+                    className="grid min-h-[116px] grid-cols-[1fr_auto] items-center gap-4 rounded-[var(--d-radius-xl)] border border-[var(--d-border)] bg-[var(--d-surface)] p-5 text-left shadow-[var(--d-shadow-soft)] active:scale-[0.99]"
                   >
                     <span>
                       <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-[var(--d-soft)]">
