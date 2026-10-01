@@ -20,22 +20,22 @@ export function DominiumLogin() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  function enterSystem() {
-    window.localStorage.setItem(
-      "dominium-session",
-      JSON.stringify({
-        status: "active",
-        area: "bodega-central",
-        startedAt: new Date().toISOString(),
-      })
-    );
+ function enterSystem() {
+  window.localStorage.setItem("dominium-session", "active");
 
-    setEntering(true);
+  const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
 
-    window.setTimeout(() => {
-      router.push("/acceso");
-    }, 1450);
+  if (isDesktop) {
+    router.push("/acceso");
+    return;
   }
+
+  setEntering(true);
+
+  window.setTimeout(() => {
+    router.push("/acceso");
+  }, 1450);
+}
 
   return (
     <main className="min-h-dvh overflow-hidden bg-[var(--d-bg)] text-[var(--d-text)]">

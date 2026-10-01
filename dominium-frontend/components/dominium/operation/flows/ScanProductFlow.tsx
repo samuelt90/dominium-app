@@ -8,6 +8,46 @@ import {
   type DominiumMockProduct,
 } from "@/lib/dominium/mock-operation";
 
+
+function playScanFeedback() {
+  navigator.vibrate?.(80);
+
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+
+    if (!AudioContextClass) {
+      return;
+    }
+
+    const audioContext = new AudioContextClass();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.value = 880;
+
+    gain.gain.setValueAtTime(0.001, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.18, audioContext.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.13);
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.14);
+
+    oscillator.onended = () => {
+      void audioContext.close();
+    };
+  } catch {
+    // El sonido puede ser bloqueado por el navegador. No rompemos el scanner.
+  }
+}
+
+
 const DominiumBarcodeScanner = dynamic(
   () =>
     import("@/components/dominium/scanner/DominiumBarcodeScanner").then(
@@ -50,6 +90,7 @@ export function ScanProductFlow() {
   });
 
   const handleScan = useCallback((barcode: string) => {
+    playScanFeedback();
     const product = findMockProductByBarcode(barcode);
 
     if (product) {

@@ -1,12 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { DominiumOperationModeId } from "@/types/dominium";
 import { operationModes } from "@/lib/dominium/mock-operation";
 import { DominiumThemeToggle } from "@/components/dominium/theme/DominiumThemeToggle";
 import { ScanProductFlow } from "@/components/dominium/operation/flows/ScanProductFlow";
-import { GuideBuilderFlow } from "./flows/GuideBuilderFlow";
-import { AuthorizedReceiptFlow } from "./flows/AuthorizedReceiptFlow";
+import { GuideBuilderFlow } from "@/components/dominium/operation/flows/GuideBuilderFlow";
+import { AuthorizedReceiptFlow } from "@/components/dominium/operation/flows/AuthorizedReceiptFlow";
+
 export function OperationHome() {
   const [activeModeId, setActiveModeId] =
     useState<DominiumOperationModeId>("scan-product");
@@ -14,7 +16,9 @@ export function OperationHome() {
   const [mobileFlowOpen, setMobileFlowOpen] = useState(false);
 
   const activeMode = useMemo(
-    () => operationModes.find((mode) => mode.id === activeModeId) ?? operationModes[0],
+    () =>
+      operationModes.find((mode) => mode.id === activeModeId) ??
+      operationModes[0],
     [activeModeId]
   );
 
@@ -28,18 +32,27 @@ export function OperationHome() {
       <section className="flex h-dvh flex-col overflow-hidden px-4 pb-5 pt-6 lg:hidden">
         {!mobileFlowOpen ? (
           <>
-            <header className="flex shrink-0 items-start justify-between gap-3">
-              <div>
+            <header className="shrink-0">
+              <div className="flex items-center justify-between gap-3">
+                <Link
+                  href="/acceso"
+                  className="inline-flex h-10 items-center rounded-full border border-[var(--d-border)] bg-[var(--d-surface)] px-4 text-sm font-black text-[var(--d-text)] shadow-[var(--d-shadow-soft)]"
+                >
+                  ← Volver
+                </Link>
+
+                <DominiumThemeToggle />
+              </div>
+
+              <div className="mt-6">
                 <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[var(--d-soft)]">
                   Dominium
                 </p>
 
-                <h1 className="mt-2 text-4xl font-black leading-none tracking-[-0.08em] text-[var(--d-text)]">
+                <h1 className="mt-2 text-5xl font-black leading-none tracking-[-0.09em] text-[var(--d-text)]">
                   Operación
                 </h1>
               </div>
-
-              <DominiumThemeToggle />
             </header>
 
             <div className="mt-8 shrink-0 px-1">
@@ -110,22 +123,18 @@ export function OperationHome() {
       </section>
 
       <section className="hidden h-dvh grid-cols-[320px_1fr] overflow-hidden p-5 lg:grid">
-        <aside className="flex min-h-0 flex-col rounded-[var(--d-radius-xl)] border border-[var(--d-border)] bg-[var(--d-surface)] p-5 shadow-[var(--d-shadow-soft)]">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[var(--d-soft)]">
-                Dominium
-              </p>
+        <aside className="flex min-h-0 flex-col overflow-hidden rounded-[var(--d-radius-xl)] border border-[var(--d-border)] bg-[var(--d-surface)] p-5 shadow-[var(--d-shadow-soft)]">
+          <div className="shrink-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[var(--d-soft)]">
+              Dominium
+            </p>
 
-              <h1 className="mt-2 text-5xl font-black leading-none tracking-[-0.09em] text-[var(--d-text)]">
-                Operación
-              </h1>
-            </div>
-
-            <DominiumThemeToggle />
+            <h1 className="mt-2 text-5xl font-black leading-none tracking-[-0.09em] text-[var(--d-text)]">
+              Operación
+            </h1>
           </div>
 
-          <div className="mt-8 grid gap-3">
+          <div className="mt-7 grid shrink-0 gap-3">
             {operationModes.map((mode) => {
               const isActive = mode.id === activeModeId;
 
@@ -144,7 +153,9 @@ export function OperationHome() {
                   <span
                     className={[
                       "block text-[10px] font-black uppercase tracking-[0.18em]",
-                      isActive ? "text-[var(--d-bg)]/70" : "text-[var(--d-soft)]",
+                      isActive
+                        ? "text-[var(--d-bg)]/70"
+                        : "text-[var(--d-soft)]",
                     ].join(" ")}
                   >
                     {mode.terminalLabel}
@@ -157,7 +168,9 @@ export function OperationHome() {
                   <span
                     className={[
                       "mt-2 block text-sm font-semibold leading-5",
-                      isActive ? "text-[var(--d-bg)]/75" : "text-[var(--d-muted)]",
+                      isActive
+                        ? "text-[var(--d-bg)]/75"
+                        : "text-[var(--d-muted)]",
                     ].join(" ")}
                   >
                     {mode.description}
@@ -167,10 +180,14 @@ export function OperationHome() {
             })}
           </div>
 
-          <div className="mt-auto rounded-full border border-[var(--d-border)] bg-[var(--d-bg)] px-4 py-3 text-xs font-black text-[var(--d-muted)]">
-            <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[var(--d-success)]" />
-            Sesión operativa
-          </div>
+        <div className="mt-8 shrink-0">
+  <Link
+    href="/acceso"
+    className="inline-flex h-10 w-fit items-center rounded-full px-1 text-sm font-black text-[var(--d-muted)] transition hover:text-[var(--d-text)]"
+  >
+    ← Volver
+  </Link>
+</div>
         </aside>
 
         <div className="min-w-0 overflow-hidden pl-5">
@@ -193,40 +210,4 @@ function OperationFlow({ modeId }: { modeId: DominiumOperationModeId }) {
   }
 
   return <AuthorizedReceiptFlow />;
-}
-
-function PendingOperation({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <section className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--d-soft)]">
-          {eyebrow}
-        </p>
-
-        <h2 className="mt-1 text-3xl font-black tracking-[-0.07em] text-[var(--d-text)]">
-          {title}
-        </h2>
-      </div>
-
-      <div className="mt-4 flex min-h-0 flex-1 items-center justify-center rounded-[var(--d-radius-xl)] border border-[var(--d-border)] bg-[var(--d-bg)] p-6 text-center">
-        <div className="max-w-sm">
-          <p className="text-lg font-black tracking-[-0.04em] text-[var(--d-text)]">
-            Flujo reservado
-          </p>
-
-          <p className="mt-2 text-sm font-semibold leading-6 text-[var(--d-muted)]">
-            {description}
-          </p>
-        </div>
-      </div>
-    </section>
-  );
 }
