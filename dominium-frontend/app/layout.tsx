@@ -14,8 +14,8 @@ export const metadata: Metadata = {
   description: "Control operativo de inventario, stock, escaneo y movimientos.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/app-icon.svg",
-    apple: "/app-icon.svg",
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
   },
 };
 
